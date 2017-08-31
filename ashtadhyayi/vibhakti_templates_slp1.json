@@ -1,0 +1,121 @@
+{
+    "suffixes" : [
+	    {
+            "anta" : "a",
+            "linga" : "puM",
+            "vibhaktis" : [
+                         [ "aH", "O", "AH" ],
+                         [ "am", "O", "An" ],
+                         [ "ena/eRa", "AByAm", "EH" ],
+                         [ "Aya", "AByAm", "eByaH" ],
+                         [ "At", "AByAm", "eByaH" ],
+                         [ "asya", "ayoH", "AnAm/ARAm" ],
+                         [ "e", "ayoH", "ezu" ]
+                        ]
+        },
+	    {
+            "anta" : "i",
+            "linga" : "puM",
+            "vibhaktis" : [
+                           [ "iH", "I", "ayaH" ],
+                           [ "im", "I", "In" ],
+                           [ "inA/iRA", "iByAm", "iBiH" ],
+                           [ "aye", "iByAm", "iByaH" ],
+                           [ "eH", "iByAm", "iByaH" ],
+                           [ "eH", "yoH", "InAm/IRAm" ],
+                           [ "O", "yoH", "izu" ]
+                          ]
+        },
+        {
+            "anta" : "u",
+            "linga" : "puM",
+            "vibhaktis" : [
+                           [ "uH", "U", "avaH" ],
+                           [ "um", "U", "Un" ],
+                           [ "unA/uRA", "uByAm", "uBiH" ],
+                           [ "ave", "uByAm", "uByaH" ],
+                           [ "oH", "uByAm", "uByaH" ],
+                           [ "oH", "voH", "UnAm/URAm" ],
+                           [ "O", "voH", "uzu" ]
+                          ]
+        },
+        {
+            "anta" : "f",
+            "linga" : "puM",
+            "vibhaktis" : [
+                           [ "A", "rO", "raH" ],
+                           [ "ram", "rO", "Fn" ],
+                           [ "rA", "fByAm", "fBiH" ],
+                           [ "re", "fByAm", "fByaH" ],
+                           [ "uH", "fByAm", "fByaH" ],
+                           [ "uH", "roH", "FRAm" ],
+                           [ "ari", "roH", "fzu" ]
+                          ]
+        },
+	    {
+            "anta" : "A",
+            "linga" : "strI",
+            "vibhaktis" : [
+                           [ "A", "e", "AH" ],
+                           [ "Am", "e", "AH" ],
+                           [ "ayA", "AByAm", "ABiH" ],
+                           [ "AyE", "AByAm", "AByaH" ],
+                           [ "AyAH", "AByAm", "AByaH" ],
+                           [ "AyAH", "ayoH", "AnAm/ARAm" ],
+                           [ "AyAm", "ayoH", "Asu" ]
+                          ]
+        },
+	    {
+            "anta" : "i",
+            "linga" : "strI",
+            "vibhaktis" : [
+                           [ "iH", "I", "ayaH" ],
+                           [ "im", "I", "IH" ],
+                           [ "yA", "iByAm", "iBiH" ],
+                           [ "yE", "iByAm", "iByaH" ],
+                           [ "yAH", "iByAm", "iByaH" ],
+                           [ "yAH", "yoH", "InAm/IRAm" ],
+                           [ "yAm", "yoH", "izu" ]
+                          ]
+        },
+	    {
+            "anta" : "I",
+            "linga" : "strI",
+            "vibhaktis" : [
+                           [ "I", "yO", "yaH" ],
+                           [ "Im", "yO", "IH" ],
+                           [ "yA", "IByAm", "IBiH" ],
+                           [ "yE", "IByAm", "IByaH" ],
+                           [ "yAH", "IByAm", "IByaH" ],
+                           [ "yAH", "yoH", "InAm/IRAm" ],
+                           [ "yAm", "yoH", "Izu" ]
+                          ]
+        },
+	    {
+            "anta" : "a",
+            "linga" : "napuM",
+            "vibhaktis" : [
+                         [ "am", "e", "Ani" ],
+                         [ "am", "e", "Ani" ],
+                         [ "ena/eRa", "AByAm", "EH" ],
+                         [ "Aya", "AByAm", "eByaH" ],
+                         [ "At", "AByAm", "eByaH" ],
+                         [ "asya", "ayoH", "AnAm/ARAm" ],
+                         [ "e", "ayoH", "ezu" ]
+                        ]
+        },
+	    {
+            "anta" : "",
+            "linga" : "",
+            "vibhaktis" : [
+                         [ "", "O", "aH" ],
+                         [ "am", "O", "aH" ],
+                         [ "A", "ByAm", "BiH" ],
+                         [ "e", "ByAm", "ByaH" ],
+                         [ "aH", "ByAm", "ByaH" ],
+                         [ "aH", "oH", "Am" ],
+                         [ "i", "oH", "zu" ]
+                        ]
+        }
+    ]
+}

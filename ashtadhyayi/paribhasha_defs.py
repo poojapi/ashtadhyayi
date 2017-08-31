@@ -1,0 +1,70 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from .ashtadhyayi_mod import *
+from pprint import pprint
+
+def sutra_add_pada(sutra, pada_desc):
+    out_sutra = sutra.copy()
+    out_sutra['PadacCheda'].insert(0, pada_desc)
+    return out_sutra
+        
+paribhasha_defs = {
+    str(11003) : [
+            {
+                "cond" : {
+                    "mahavakya_padacCheda" : {
+                        "pada" : ["गुणः", "वृद्धिः"],
+                        "vibhakti" : 1
+                        },
+                    "Sutra_type" : ["विधिः"]
+                },
+                "action" : lambda x: x
+            }
+        ],
+    str(11046) : [
+            {
+                "cond" : {
+                    "PadacCheda" : 
+                        [AND, [[NOT, SAMJNA], [NOT, PRATYAYA],
+                               [IT_ENDING, { "varna" : "ट्" } ]]],
+                    "Sutra_type" : ["विधिः"]
+                },
+                "action" : [
+                    sutra_add_pada, { "pada" : "षष्ठ्यन्तस्य",  "vibhakti" : 6, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "आदिः",  "vibhakti" : 1, 'type' : "सुबन्त"}
+                    ]
+            },
+            {
+                "cond" : {
+                    "PadacCheda" : 
+                        [AND, [[NOT, SAMJNA], [NOT, PRATYAYA],
+                               [IT_ENDING, { "varna" : "क्"} ]]],
+                    "Sutra_type" : ["विधिः"]
+                },
+                "action" : [
+                    sutra_add_pada, { "pada" : "षष्ठ्यन्तस्य",  "vibhakti" : 6, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "अन्तः", "vibhakti": 1, 'type' : "सुबन्त"}
+                    ]
+            }
+        ],
+    str(11047) : [
+            {
+                "cond" : {
+                    "PadacCheda" : 
+                        [AND, [[NOT, SAMJNA],
+                               [IT_ENDING, { "varna" : "म्" } ]]],
+                    "Sutra_type" : ["विधिः"]
+                },
+                "action" : [
+                    sutra_add_pada, { "pada" : "षष्ठ्यन्तस्य",  "vibhakti" : 6, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "अन्त्यात्",  "vibhakti" : 1, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "अचः",  "vibhakti" : 1, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "परः",  "vibhakti" : 1, 'type' : "सुबन्त"}
+                    ]
+            },
+        ]
+}
+
+def get_paribhasha(sutra_id):
+    return Paribhasha(sutra_id, paribhasha_defs[str(sutra_id)])
