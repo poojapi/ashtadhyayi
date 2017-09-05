@@ -20,9 +20,9 @@ setup(name='vedavaapi_ashtadhyayi',
       entry_points = {
         'console_scripts' : ['paribhasha=ashtadhyayi.cmdline:paribhasha',
                              'mahavakya=ashtadhyayi.cmdline:mahavakya']
-      }
-      test_suite='nose.collector',
-      tests_require=['nose'],
+      },
+#      test_suite='nose.collector',
+#      tests_require=['nose'],
       install_requires=[
           'indic_transliteration',
       ],

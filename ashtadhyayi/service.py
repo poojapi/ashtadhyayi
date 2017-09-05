@@ -18,6 +18,55 @@ SAMJNA = None
 PRATYAYA = None
 IT_ENDING = None
 
+class Subanta:
+    vibhakti_suffixes = []
+    def __init__(self):
+        try:
+            with open(getpath("vibhakti_templates_slp1.json")) as f:
+                vibhakti_dict = json.load(f)
+                self.vibhakti_suffixes = vibhakti_dict['suffixes']
+        except Exception as e:
+            print "Error loading vibhaktidictslp.json: ", e
+            exit(1)
+
+    def praatipadika(self, pada_desc):
+        if 'vibhakti' not in pada_desc:
+            return None
+        if pada_desc['vibhakti'] == 0:
+            return [{'praatipadikam' : pada_desc['pada'] }]
+
+        pada = sanscript.transliterate(pada_desc['pada'],
+                    sanscript.DEVANAGARI, sanscript.SLP1)
+        vibhakti = pada_desc['vibhakti']
+        vachana = pada_desc['vachana']
+
+        matches = []
+        max_len = -1
+        #print s_id
+        # Find vibhaktis with a maximal match of suffix
+        #pprint(self.vibhakti_suffixes)
+        for v_entry in self.vibhakti_suffixes:
+            v = v_entry["vibhaktis"]
+            suffix_str = v[vibhakti-1][vachana-1]
+            for suffix in suffix_str.split('/'):
+                pada = re.sub(r'[mM]$', 'm', pada)
+                suffix = re.sub(r'[mM]$', 'm', suffix)
+                if pada.endswith(suffix):
+                    l = len(suffix)
+                    if l < max_len:
+                        continue
+                    elif l > max_len:
+                        matches = []
+                    max_len = l
+
+                    stem = pada if l <= 0 else pada[:- l]
+                    praatipadikam = stem + v_entry['anta']
+                    prathamaa_rupam = stem + v[0][0]
+                    #print str(vibhakti) + ", " + str(vachana) + ": " + v_entry['anta'] + " " + v_entry['linga'] + " " + pada + " -> " + praatipadikam + " -> " + prathamaa_rupam
+                    matches.append({'anta' : v_entry['anta'], 'linga' : v_entry['linga'], 'praatipadikam' : praatipadikam })
+
+        return matches
+
 class Ashtadhyayi:
     def __init__(self, sutras_json_file):
     	self.sutra_ids = []
@@ -29,9 +78,9 @@ class Ashtadhyayi:
             except ValueError as err: # catch *all* exceptions
                 print("Error: Format error in JSON file: ", err, ": aborting.", sutras_json_file)
                 exit(1)
+        self.build_mahavakyas()
         self.infer_praatipadikas()
         self.extract_termdefs()
-        self.build_mahavakyas()
         self.extract_pratyayas()
 
         global AND
@@ -153,19 +202,22 @@ class Ashtadhyayi:
             return False
         return True
 
+    def equal_dvng(self, w1, w2):
+        ma = "म्"
+        ma = ma.decode('utf-8')
+        if not (w1.endswith(ma) or w2.endswith(ma)):
+            return w1 == w2
+        w1 = sanscript.transliterate(w1, sanscript.DEVANAGARI, sanscript.SLP1)
+        w2 = sanscript.transliterate(w2, sanscript.DEVANAGARI, sanscript.SLP1)
+        w1 = re.sub(r'[mM]$', 'm', w1)
+        w2 = re.sub(r'[mM]$', 'm', w2)
+        return w1 == w2
+
     def sutras(self, match_props = None):
     	return (snum for snum in self.sutra_ids \
             if self._propmatch(self.sutra(snum), match_props))
 
     def infer_praatipadikas(self):
-
-        try:
-            with open(getpath("vibhakti_templates_slp1.json")) as f:
-                vibhakti_dict = json.load(f)
-                suffixes = vibhakti_dict['suffixes']
-        except Exception as e:
-            print "Error loading vibhaktidictslp.json: ", e
-            exit(1)
 
         for s_id in self.sutras():
             sutra = self.sutra(s_id)
@@ -177,37 +229,7 @@ class Ashtadhyayi:
                 if p['vibhakti'] == 0:
                     continue
 
-                pada = sanscript.transliterate(p['pada'],
-                            sanscript.DEVANAGARI, sanscript.SLP1)
-                vibhakti = p['vibhakti']
-                vachana = p['vachana']
-
-                matches = []
-                max_len = 0
-                #print s_id
-                # Find vibhaktis with a maximal match of suffix
-                for v_entry in suffixes:
-                    #pprint(v_entry)
-                    v = v_entry["vibhaktis"]
-                    suffix_str = v[vibhakti-1][vachana-1]
-                    for suffix in suffix_str.split('/'):
-                        pada = re.sub(r'[mM]$', 'm', pada)
-                        suffix = re.sub(r'[mM]$', 'm', suffix)
-                        if pada.endswith(suffix):
-                            l = len(suffix)
-                            if l < max_len:
-                                continue
-                            elif l > max_len:
-                                matches = []
-                            max_len = l
-
-                            stem = pada[:- l]
-                            praatipadikam = stem + v_entry['anta']
-                            prathamaa_rupam = stem + v[0][0]
-                            #print str(vibhakti) + ", " + str(vachana) + ": " + v_entry['anta'] + " " + v_entry['linga'] + " " + pada + " -> " + praatipadikam + " -> " + prathamaa_rupam
-                            matches.append({'anta' : v_entry['anta'], 'linga' : v_entry['linga'], 'praatipadikam' : praatipadikam })
-
-                p['analysis'] = matches 
+                p['analysis'] = Subanta().praatipadika(p)
 
     def extract_termdefs(self):
         samjna_file = "terms.json"
@@ -223,14 +245,62 @@ class Ashtadhyayi:
         for snum in self.sutras({ 'Sutra_type' : "संज्ञा" }):
             s = self.sutra(snum)
             for t in s['Term'].split():
-                # Remove the Zero-width-nonjoiner char at end of word
-                if t.endswith(u"\u200C"):
-                    t = t[:-1]
                 if t not in self.terms_db:
-                    self.terms_db[t] = [snum]
-                else:
-                    self.terms_db[t].append(snum)
+                    self.terms_db[t] = []
+
                 #print t.encode('utf-8')
+                pdesc = Subanta().praatipadika({'pada' : t,
+                    'vibhakti' : 1, 'vachana' : 1})
+                #print_dict(pdesc)
+                if pdesc:
+                    praatipadikam = pdesc[0]['praatipadikam']
+
+                defn = []
+                def_padas = []
+                for p in s['mahavakya_padacCheda']:
+                    if p['pada'] == t:
+                        continue
+                    #print_dict(p)
+                    if 'analysis' in p:
+                        found = False
+                        for pada_a in p['analysis']:
+                            for term_a in pdesc:
+                                #print pada_a['praatipadikam'] + " == " + term_a['praatipadikam']
+                                if pada_a['praatipadikam'] == term_a['praatipadikam']:
+                                    found = True
+                                    break
+                            if found:
+                                break
+                        if found:
+                            continue
+
+                    if 'pada_split' in p:
+                        #pada_split_slp1 = sanscript.transliterate(p['pada_split'], 
+                        #    sanscript.DEVANAGARI, sanscript.SLP1)
+
+                        split_desc = { 'pada' : p['pada_split'],
+                            'vibhakti' : p['vibhakti'],
+                            'vachana' : p['vachana'] }
+                        plist = Subanta().praatipadika(split_desc)
+                        if plist is None:   
+                            print "Error getting praatipadika of ", p['pada_split'].encode('utf-8')
+                            exit(1)
+                        found = False
+                        for w_p in plist:
+                            w = w_p['praatipadikam']
+                            found = reduce(lambda x, y: x or y,
+                                [(pada == praatipadikam) 
+                                    for pada in w.split('-')])
+                            if found:
+                                break
+                        if found:
+                            continue
+                    #print_dict(p)
+                    def_padas.append(p['pada'].encode('utf-8'))
+                    defn.append(p)
+                self.terms_db[t].append({'sutra_id' : snum, 'defn' : defn})
+                print "{}: {} = {}".format(snum, t.encode('utf-8'), ' '.join(def_padas))
+
         with open("terms.json", "w") as f:
             stext = json.dumps(self.terms_db, indent=4, ensure_ascii=False, separators=(',', ': '))
             f.write(stext.encode('utf-8') + "\n")
@@ -255,7 +325,7 @@ class Ashtadhyayi:
 
                 for p in vrttam['padas']:
                     for prevp in prev_padaccheda:
-                        if p == prevp['pada']:
+                        if self.equal_dvng(p, prevp['pada']):
                             new_vaakya.append(prevp)
                             break
 

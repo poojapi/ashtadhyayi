@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from .ashtadhyayi_mod import *
+from .service import *
 from pprint import pprint
 
 def sutra_add_pada(sutra, pada_desc):

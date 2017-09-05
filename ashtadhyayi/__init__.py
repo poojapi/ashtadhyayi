@@ -1,2 +1,2 @@
-from .ashtadhyayi_mod import *
+from .service import *
 from .paribhasha_defs import *

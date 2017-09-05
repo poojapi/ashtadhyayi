@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from ashtadhyayi.utils import *
 from ashtadhyayi import *
 
 def a():
@@ -23,3 +24,8 @@ def paribhasha(sutra_id):
         out = dict((k, s[k]) for k in ('Sutra_krama', 'Sutra_text', 'Sutra_type'))
         matches.append(out)
     return matches
+
+def praatipadika(pada, vibhakti=1, vachana=1):
+    pada = sanscript.transliterate(pada, sanscript.SLP1, sanscript.DEVANAGARI)
+    return Subanta().praatipadika({'pada': pada, 'vibhakti' : vibhakti, 
+        'vachana' : vachana})
