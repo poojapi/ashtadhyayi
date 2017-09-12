@@ -27,5 +27,5 @@ def paribhasha(sutra_id):
 
 def praatipadika(pada, vibhakti=1, vachana=1):
     pada = sanscript.transliterate(pada, sanscript.SLP1, sanscript.DEVANAGARI)
-    return Subanta().praatipadika({'pada': pada, 'vibhakti' : vibhakti, 
+    return Subanta().analyze({'pada': pada, 'vibhakti' : vibhakti, 
         'vachana' : vachana})

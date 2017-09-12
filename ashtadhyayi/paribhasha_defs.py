@@ -58,12 +58,44 @@ paribhasha_defs = {
                 },
                 "action" : [
                     sutra_add_pada, { "pada" : "षष्ठ्यन्तस्य",  "vibhakti" : 6, 'type' : "सुबन्त"},
-                    sutra_add_pada, { "pada" : "अन्त्यात्",  "vibhakti" : 1, 'type' : "सुबन्त"},
-                    sutra_add_pada, { "pada" : "अचः",  "vibhakti" : 1, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "अन्त्यात्",  "vibhakti" : 5, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "अचः",  "vibhakti" : 5, 'type' : "सुबन्त"},
                     sutra_add_pada, { "pada" : "परः",  "vibhakti" : 1, 'type' : "सुबन्त"}
                     ]
             },
-        ]
+        ],
+     str(11048) : [
+            {
+                "cond" : {
+                    "PadacCheda" : {
+                        "pada" : ["ह्रस्वः"],
+                        "vibhakti" : 1
+                        },
+                    "Sutra_type" : ["विधिः"]
+                },
+               "action" : [
+                    sutra_add_pada, { "pada" : "एचः",  "vibhakti" : 6, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "चेत्",  "vibhakti" : 0, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "इक्",  "vibhakti" : 1, 'type' : "सुबन्त"},
+                    ]
+	     }		
+	],
+    str(11049) : [
+            {
+                "cond" : {
+                    "PadacCheda" :{ 
+                        "type" : ["सुबन्त"],
+			"vibhakti" : 6 
+			},
+                       "Sutra_type" : ["विधिः"]
+                },
+               "action" : [
+                    sutra_add_pada, { "pada" : "एचः",  "vibhakti" : 6, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "चेत्",  "vibhakti" : 0, 'type' : "सुबन्त"},
+                    sutra_add_pada, { "pada" : "इक्",  "vibhakti" : 1, 'type' : "सुबन्त"},
+                    ]
+	     },		
+	]
 }
 
 def get_paribhasha(sutra_id):

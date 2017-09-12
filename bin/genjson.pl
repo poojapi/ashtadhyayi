@@ -145,11 +145,14 @@ sub print_sutra
     }
     elsif ($name =~ /^Sutra_type/i) {
         if (! defined($val) || ! $val) {
-		$val = "विधिः";
+            $val = "विधिः";
         }
         if ($val =~ /;/) {
             #my $types = split(/;\s*/, $val)
             $val = "[ \"" . join('", "', split(/;\s*/, $val)) . "\"]";
+        }
+        if ($val !~ /\[/) {
+            $val = "[ \"$val\" ]";
         }
     }
 
