@@ -17,6 +17,14 @@ NOT = None
 SAMJNA = None
 PRATYAYA = None
 IT_ENDING = None
+UPADESHA = None
+
+predefined_funcs = {
+    'antyam' : lambda x: x[-1],
+    'AdiH' : lambda x: x[0],
+    'upadeSe' : UPADESHA
+
+}
 
 class Subanta:
     vibhakti_suffixes = []
@@ -73,15 +81,19 @@ class Subanta:
 class Ashtadhyayi:
     def __init__(self, sutras_json_file):
     	self.sutra_ids = []
+        self.sutra_id_idx = {}
         self.terms_db = {}
         with open(sutras_json_file) as data_file:
             try:
                 self.ashtadhyayi = json.load(data_file)
-		self.sutra_ids = sorted(self.ashtadhyayi['sutras'].keys())
+                self.sutra_ids = sorted(self.ashtadhyayi['sutras'].keys())
+                for i in range(len(self.sutra_ids)):
+                    self.sutra_id_idx[self.sutra_ids[i]] = i
             except ValueError as err: # catch *all* exceptions
                 print("Error: Format error in JSON file: ", err, ": aborting.", sutras_json_file)
                 exit(1)
 
+        self.load_upadeshas()
         self.build_mahavakyas()
         self.infer_praatipadikas()
         self.extract_termdefs()
@@ -99,6 +111,8 @@ class Ashtadhyayi:
         PRATYAYA = self.is_pratyaya
         global IT_ENDING
         IT_ENDING = self.it_ending
+        global UPADESHA
+        UPADESHA = self.is_upadesha
 
     def _and(self, pada_desc, conds):
         return reduce((lambda x, y: x and y), 
@@ -113,6 +127,13 @@ class Ashtadhyayi:
         #print_dict(cond)
         return not self._propmatch(pada_desc, cond)
 
+    def load_upadeshas(self):
+        self.upadeshas = { 'sutras' : [], 'dhaatu' : [], 
+            'pratyaya' : [], 'nipAta' : [] }
+        with open(datapath("maheshvara-sutras.txt")) as f:
+            self.upadesha['sutras'] = [l.strip() for l in f.readlines()]
+            pprint(self.upadesha['sutras'])
+
     def is_samjna(self, pada_desc):
         match = pada_desc['pada'] in self.terms_db
         if match:
@@ -126,6 +147,12 @@ class Ashtadhyayi:
 #            print "Found ", pada_desc['pada'].encode('utf-8')
             pass
         return match
+
+    def is_upadesha(self, pada):
+        for gana in self.upadesha.keys():
+            if pada in self.upadesha[gana]
+                return gana
+        return None
 
     def it_ending(self, pada_desc, parms):
         subanta = "सुबन्त"
@@ -234,38 +261,74 @@ class Ashtadhyayi:
 
                 p['analysis'] = Subanta().analyze(p)
 
-    def find_term_members():
-        for t,defn in self.terms_db.items():
-            rule = { 'kutra' : [], 'kasmAt': [], 'kim' : [] }
-            s = self.sutra(defn['sutra_id'])
-            if _d("अधिकारः")‌ in s['Sutra_type']:
-                sstart, sstop = map(lambda x: int(x)+1, s['Influence'].split('-'))
-                members = {}
-                for as_id in range(sstart, sstop):
-                    a_s = self.sutra(str(as_id))
-                    t_exists = reduce(lambda x, y: x or y,
-                                    [(t in a['padas']) for a in a_s['Anuvrtti']])
-                    if not t_exists:
-                        continue
+    def find_term_sets(self):
+        not_terms = {}
+        with open(datapath("pratyaya-notlist.txt")) as f:
+            lines = f.readlines()
+            for l in lines:
+                l = l.rstrip()
+                not_terms[l.decode('utf-8')] = True
 
-                    if _d("संज्ञा") in a_s['Sutra_type']:
-                        myterm = a_s['Term']
-                        if myterm not in members:
-                            members[myterm] = []
-                        members[myterm].append(as_id)
-                        continue
+        #rule = { 'kutra' : [], 'kasmAt': [], 'kim' : [] }
+        for t,term_desc in self.terms_db.items():
+            for defn in term_desc['defns']:
+                s = self.sutra(defn['sutra_id'])
+                if utf8_decode("अधिकारः") in s['Sutra_type']:
+                    sfirst, slast = s['Influence'].split('-')
+                    starti = self.sutra_id_idx[sfirst] + 1
+                    stopi = self.sutra_id_idx[slast] + 1
+                    members = {}
+                    for i in range(starti, stopi):
+                        as_id = self.sutra_ids[i]
+                        a_s = self.sutra(str(as_id))
+                        if 'Anuvrtti' not in a_s:
+                            continue
+                        t_exists = reduce(lambda x, y: x or y,
+                                        [(t in a['padas']) for a in a_s['Anuvrtti']])
+                        if not t_exists:
+                            continue
 
-                    # Pick words in prathama-vibhakti as candidates
-                    for p in a_s['PadacCheda']:
-                        if p['type'] == subanta and p['vibhakti'] == 1:
-                            pada = p['pada']
-                            #print snum, pada.encode('utf-8')
-                            #if pada.endswith(u"\u200C"):
-                            #    continue
-                            if pada not in members:
-                                members[pada] = []
-                            members[pada].append(snum)
-                defn['members'] = members
+                        if utf8_decode("संज्ञा") in a_s['Sutra_type']:
+                            myterm = a_s['Term']
+                            if myterm not in members:
+                                members[myterm] = []
+                            members[myterm].append(as_id)
+                            continue
+
+                        # Pick words in prathama-vibhakti as candidates
+                        for p in a_s['PadacCheda']:
+                            if p['type'] == utf8_decode("सुबन्त") and p['vibhakti'] == 1:
+                                pada = p['pada']
+                                if pada in not_terms:
+                                    continue
+                                #print snum, pada.encode('utf-8')
+                                #if pada.endswith(u"\u200C"):
+                                #    continue
+                                if pada not in members:
+                                    members[pada] = []
+                                members[pada].append(as_id)
+                    term_desc['members'] = members
+
+    def interpret_termdefs(self):
+        #rule = { 'kutra' : [], 'kasmAt': [], 'kim' : [] }
+        for t,term_desc in self.terms_db.items():
+            if 'members' in term_desc:
+                continue
+            for defn in term_desc['defns']:
+                s = self.sutra(defn['sutra_id'])
+                if utf8_decode("संज्ञा") in s['Sutra_type']:
+                    continue
+                for p in defn['defn']:
+                    if p['type'] != utf8_decode("सुबन्त"):
+                        continue
+                    if p['vibhakti'] != 1:
+                        continue
+                    mymembers = []
+                    if 'pada_split' in p:
+                        for pada in p['pada_split'].split('-'):
+                            if 'members' in self.terms_db[pada]:
+                                mymembers.append(self.terms_db[pada]['members'].keys())
+                        
 
     def extract_termdefs(self):
         samjna_file = outpath("terms.json")
@@ -283,7 +346,7 @@ class Ashtadhyayi:
             s = self.sutra(snum)
             for t in s['Term'].split():
                 if t not in self.terms_db:
-                    self.terms_db[t] = []
+                    self.terms_db[t] = { 'defns' : [] }
 
                 #print t.encode('utf-8')
                 pdesc = Subanta().analyze({'pada' : t,
@@ -336,10 +399,11 @@ class Ashtadhyayi:
                     v_desc = p['vibhakti'] if 'vibhakti' in p else -1
                     def_padas.append("{}({})".format(p['pada'].encode('utf-8'), v_desc))
                     defn.append(p)
-                self.terms_db[t].append({'sutra_id' : snum, 'defn' : defn})
+                self.terms_db[t]['defns'].append({'sutra_id' : snum, 'defn' : defn})
                 term_defs_str += "{}: {} = {}\n".format(snum, t.encode('utf-8'), ' '.join(def_padas))
 
-        self.find_term_members()
+        self.find_term_sets()
+        self.interpret_termdefs()
 
         with open(outpath("terms.json"), "w") as f:
             stext = json.dumps(self.terms_db, indent=4, ensure_ascii=False, separators=(',', ': '))

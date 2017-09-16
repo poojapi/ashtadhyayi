@@ -144,6 +144,19 @@
                         ]
         },
 	    {
+            "anta" : "in",
+            "linga" : "napuM",
+            "vibhaktis" : [
+                         [ "i", "inI", "Ini" ],
+                         [ "i", "inI", "Ini" ],
+                         [ "inA/iRA", "iByAm", "iBiH" ],
+                         [ "ine", "iByAm", "iByaH" ],
+                         [ "inaH", "iByAm", "iByaH" ],
+                         [ "inoH", "inoH", "inAm/iRAm" ],
+                         [ "ini", "inoH", "izu" ]
+                        ]
+        },
+	    {
             "anta" : "an",
             "linga" : "napuM",
             "vibhaktis" : [
