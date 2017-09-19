@@ -8,6 +8,8 @@ import re
 import os.path
 from .utils import *
 from .config import *
+from .subanta import *
+from .rule import *
 from pprint import pprint
 from indic_transliteration import sanscript
 
@@ -19,101 +21,12 @@ PRATYAYA = None
 IT_ENDING = None
 UPADESHA = None
 
-# Key should be in SLP1 format
-predefined_funcs = {
-    'antyam' : lambda x: Subanta().praatipadikam(x)[-1],
-    'AdiH' : lambda x: Subanta().praatipadikam(x)[0],
-    'upadeSe' : UPADESHA,
-    'hal_shabda' : lambda x: x if x == 'hal' else ''
-
-}
-
-class Subanta:
-    vibhakti_suffixes = []
-    def __init__(self):
-        try:
-            with open(datapath("vibhakti_templates_slp1.json")) as f:
-                vibhakti_dict = json.load(f)
-                self.vibhakti_suffixes = vibhakti_dict['suffixes']
-        except Exception as e:
-            print "Error loading vibhaktidictslp.json: ", e
-            exit(1)
-
-    def analyze(self, pada_desc):
-        if 'vibhakti' not in pada_desc:
-            return None
-
-        pada = sanscript.transliterate(pada_desc['pada'],
-                    sanscript.DEVANAGARI, sanscript.SLP1)
-        if pada_desc['vibhakti'] == 0:
-            # Avyayam
-            return [{'praatipadikam' : pada, 'stem' : pada, 'anta' : ''}]
-        vibhakti = pada_desc['vibhakti']
-        vachana = pada_desc['vachana']
-
-        matches = []
-        max_len = -1
-        #print s_id
-        # Find vibhaktis with a maximal match of suffix
-        #pprint(self.vibhakti_suffixes)
-        for v_entry in self.vibhakti_suffixes:
-            v = v_entry["vibhaktis"]
-            suffix_str = v[vibhakti-1][vachana-1]
-            for suffix in suffix_str.split('/'):
-                pada = re.sub(r'[mM]$', 'm', pada)
-                suffix = re.sub(r'[mM]$', 'm', suffix)
-                if pada.endswith(suffix):
-                    l = len(suffix)
-                    if l < max_len:
-                        continue
-                    elif l > max_len:
-                        matches = []
-                    max_len = l
-
-                    stem = pada if l <= 0 else pada[:- l]
-                    praatipadikam = stem + v_entry['anta']
-                    prathamaa_rupam = stem + v[0][0]
-                    #print str(vibhakti) + ", " + str(vachana) + ": " + v_entry['anta'] + " " + v_entry['linga'] + " " + pada + " -> " + praatipadikam + " -> " + prathamaa_rupam
-                    matches.append({'anta' : v_entry['anta'], 
-                        'linga' : v_entry['linga'], 
-                        'praatipadikam' : praatipadikam, 'stem' : stem})
-
-        return matches
-
-    def praatipadikam(self, pada_desc):
-        if 'analysis' not in pada_desc or \
-            len(pada_desc['analysis']) == 0:
-            return None
-        praatipadikam = pada_desc['analysis'][0]['praatipadikam']
-        return praatipadikam if praatipadikam else None
-
 class Ashtadhyayi:
     def __init__(self, sutras_json_file):
     	self.sutra_ids = []
         self.sutra_id_idx = {}
         self.terms_db = {}
-        with open(sutras_json_file) as data_file:
-            try:
-                self.ashtadhyayi = json.load(data_file)
-                self.sutra_ids = sorted(self.ashtadhyayi['sutras'].keys())
-                for i in range(len(self.sutra_ids)):
-                    self.sutra_id_idx[self.sutra_ids[i]] = i
-            except ValueError as err: # catch *all* exceptions
-                print("Error: Format error in JSON file: ", err, ": aborting.", sutras_json_file)
-                exit(1)
 
-        self.load_upadeshas()
-        self.infer_praatipadikas()
-        self.build_mahavakyas()
-        self.extract_termdefs()
-        self.extract_pratyayas()
-
-#        self.funcs = ["AND", "OR", "NOT", "SAMJNA", "PRATYAYA", "IT_ENDING",
-#            "UPADESHA", "INTERPRET", "IF"]
-#        for f in self.funcs:
-#            func = eval(f)
-#            global func
-#            func = self.
         global AND
         AND = self._and
         global OR
@@ -128,12 +41,34 @@ class Ashtadhyayi:
         IT_ENDING = self.it_ending
         global UPADESHA
         UPADESHA = self.is_upadesha
-        global IF
-        IF = self._if
-        global INTERPRET
-        INTERPRET = self._interpret
-        global APPLY
-        APPLY = self._apply_func
+
+        # Key should be in SLP1 format
+        self.predefined_funcs = {
+            'antya' : lambda x: Subanta.praatipadikam(x)[-1],
+            'Adi' : lambda x: Subanta.praatipadikam(x)[0],
+            'upadeSa' : UPADESHA,
+            'hal' : lambda x: x if x['pada'] == 'hal' else None
+        }
+
+        print "Loading Ashtadhyayi sutras .."
+        with open(sutras_json_file) as data_file:
+            try:
+                self.ashtadhyayi = json.load(data_file)
+                self.sutra_ids = sorted(self.ashtadhyayi['sutras'].keys())
+                for i in range(len(self.sutra_ids)):
+                    self.sutra_id_idx[self.sutra_ids[i]] = i
+            except ValueError as err: # catch *all* exceptions
+                print("Error: Format error in JSON file: ", err, ": aborting.", sutras_json_file)
+                exit(1)
+
+        print "Loading upadesha data .."
+        self.load_upadeshas()
+        print "Inferring Praatipadikas for all padas .."
+        self.infer_praatipadikas()
+        print "Building mahavakyas for all sutras .."
+        self.build_mahavakyas()
+        print "Pre-processing Samjna definitions .."
+        self.extract_termdefs()
 
     def _and(self, pada_desc, conds):
         return reduce((lambda x, y: x and y), 
@@ -143,46 +78,11 @@ class Ashtadhyayi:
         return reduce((lambda x, y: x or y), 
             [self._propmatch(pada_desc, c) for c in conds])
 
-    def _apply_func(self, pada_desc, func_desc):
-        f = eval(func_desc[0])
-        parms = func_desc[1:]
-        return f(pada_desc, parms)
-
-    def _union(self, pada_desc, func_descs):
-        return reduce((lambda x, y: x + y), 
-            [self._apply_func(pada_desc, f) for f in func_descs])
-
-    def _pipe(self, pada_desc, func_descs):
-        res = pada_desc
-        for f in func_descs:
-            res = self._apply_func(res, f)
-            if not res:
-                break
-        return res
 
     def _not(self, pada_desc, cond):
         #print_dict(pada_desc)
         #print_dict(cond)
         return not self._propmatch(pada_desc, cond)
-
-    def _if(self, pada_desc, cond):
-        if self._interpret(pada_desc, cond):
-            return pada_desc
-        else:
-            return None
-
-    def _interpret(self, pada_desc, sutra_pada):
-        praatipadikam = Subanta().praatipadikam(sutra_pada)
-        res = None
-        if praatipadikam in predefined_funcs:
-            res = predefined_funcs[praatipadikam](pada_desc)
-        elif self.is_samjna(sutra_pada): 
-            samjna_desc = self.terms_db[praatipadikam]['defns']
-            for defn in samjna_desc:
-                res = defn['rule'].apply(pada_desc)
-                if res:
-                    break
-        return res
 
     def load_upadeshas(self):
         self.upadesha = { 'sutras' : [], 'dhaatu' : [], 
@@ -217,7 +117,7 @@ class Ashtadhyayi:
             it[c] = True
 
     def is_samjna(self, pada_desc):
-        praatipadikam = Subanta().praatipadikam(pada_desc)
+        praatipadikam = Subanta.praatipadikam(pada_desc)
         match = praatipadikam in self.terms_db
         if match:
 #            print "Found ", pada_desc['pada'].encode('utf-8')
@@ -232,10 +132,12 @@ class Ashtadhyayi:
         return match
 
     def is_upadesha(self, pada_desc):
-        praatipadikam = Subanta().praatipadikam(pada_desc)
+        praatipadikam = Subanta.praatipadikam(pada_desc)
         for gana in self.upadesha.keys():
             if praatipadikam in self.upadesha[gana]:
-                return gana
+                print praatipadikam + " in upadesha: " + gana
+                pada_desc['upadeSa'] = gana
+                return pada_desc
         return None
 
     def it_ending(self, pada_desc, parms):
@@ -341,7 +243,7 @@ class Ashtadhyayi:
                 if 'vibhakti' not in p:
                     continue
 
-                p['analysis'] = Subanta().analyze(p)
+                p['analysis'] = Subanta.analyze(p)
 
     def find_listable_terms(self):
         not_terms = {}
@@ -365,6 +267,8 @@ class Ashtadhyayi:
                         a_s = self.sutra(str(as_id))
                         if 'Anuvrtti' not in a_s:
                             continue
+                        if t == 'tadDita':
+                            print_dict(a_s['Anuvrtti'])
                         t_exists = reduce(lambda x, y: x or y,
                                         [(t in a['praatipadikas']) for a in a_s['Anuvrtti']])
                         if not t_exists:
@@ -402,8 +306,27 @@ class Ashtadhyayi:
                     continue
                 vibhakti_ordered = sorted(defn['defn'], key=lambda k: k['vibhakti'] if ('vibhakti' in k) else 0, reverse=True)
                 #print_dict(vibhakti_ordered)
-                defn['rule'] = Rule(vibhakti_ordered).rule
+                defn['rule'] = Rule(self, t).compile(vibhakti_ordered)
                 #print(defn['rule'])
+
+    def check_samjna(self, term_slp1, pada_desc):
+        pada_desc['analysis'] = Subanta.analyze(pada_desc)
+        term_desc = self.terms_db[term_slp1]
+            
+        if 'members' in term_desc:
+            if Subanta.praatipadikam(pada_desc) in term_desc['members']:
+                return True
+        for d in term_desc['defns']:
+            print "Checking rule .."
+            print_dict(d['rule'])
+            Rule(self, term_slp1, d['rule']).apply(pada_desc)
+        return pada_desc[term_slp1]
+
+    def compute_pratyaharas(self):
+        res = self.check_samjna('it', 
+            { 'pada' : 'hal', 'vibhakti' : 1, 'vachana' : 1 })
+        print "Result: ", res
+        
 
     def extract_termdefs(self):
         samjna_file = outpath("terms.json")
@@ -415,13 +338,13 @@ class Ashtadhyayi:
                 except ValueError as err: # catch *all* exceptions
                     print("Error: Format error in JSON file: ", err, ": aborting.", samjna_file)
                 
+        print "Extracting samjna definitions from samjna sutras .."
         self.terms_db = {}
         term_defs_str = ""
         for snum in self.sutras({ 'Sutra_type' : "संज्ञा" }):
             s = self.sutra(snum)
             for t in s['Term'].split():
-                #print t.encode('utf-8')
-                pdesc = Subanta().analyze({'pada' : t,
+                pdesc = Subanta.analyze({'pada' : t,
                     'vibhakti' : 1, 'vachana' : 1})
                 #print_dict(pdesc)
                 if pdesc:
@@ -458,7 +381,7 @@ class Ashtadhyayi:
                         split_desc = { 'pada' : p['pada_split'],
                             'vibhakti' : p['vibhakti'],
                             'vachana' : p['vachana'] }
-                        plist = Subanta().analyze(split_desc)
+                        plist = Subanta.analyze(split_desc)
                         if plist is None:   
                             print "Error getting praatipadika of ", p['pada_split'].encode('utf-8')
                             exit(1)
@@ -479,7 +402,9 @@ class Ashtadhyayi:
                 self.terms_db[praatipadikam]['defns'].append({'sutra_id' : snum, 'defn' : defn})
                 term_defs_str += "{}: {} = {}\n".format(snum, praatipadikam, ' '.join(def_padas))
 
+        print "Listing members of some samjnas .."
         self.find_listable_terms()
+        print "Converting Samjna sutras into processing rules .."
         self.compile_term_rules()
 
         with open(outpath("terms.json"), "w") as f:
@@ -489,6 +414,9 @@ class Ashtadhyayi:
         with open(outpath("term_defs_slp1.txt"), "w") as f:
             term_defs_slp1 = xliterate(term_defs_str)
             f.write(term_defs_slp1)
+
+        print "Computing definitions of Pratyaharas .."
+        #self.compute_pratyaharas()
 
     def build_mahavakyas(self):
         for snum in self.sutras():
@@ -513,69 +441,13 @@ class Ashtadhyayi:
                     for prevp in prev_padaccheda:
                         if self.equal_dvng(p, prevp['pada']):
                             new_vaakya.append(prevp)
-                            praatipadikas.append(Subanta().praatipadikam(prevp))
+                            praatipadikas.append(Subanta.praatipadikam(prevp))
                             break
                 vrttam['praatipadikas'] = praatipadikas
                 #print "{}: {}".format(sutra_id, praatipadikas)
 
         new_vaakya.extend(sutra['PadacCheda'])
         return new_vaakya
-       
-    def extract_pratyayas(self):
-        pratyaya_file = outpath("pratyayas.json")
-        if os.path.isfile(pratyaya_file):
-            with open(pratyaya_file) as f:
-                try:
-                    self.pratyayas = json.load(f)
-                    return
-                except ValueError as err: # catch *all* exceptions
-                    print("Error: Format error in JSON file: ", err, ": aborting.", pratyaya_file)
-
-        self.not_pratyayas = {}
-        with open(datapath("pratyaya-notlist.txt")) as f:
-            lines = f.readlines()
-            for l in lines:
-                l = l.rstrip()
-                self.not_pratyayas[l.decode('utf-8')] = True
-                #print l
-        #stext = json.dumps(self.not_pratyayas, indent=4, ensure_ascii=False, separators=(',', ': '))
-        #print(stext.encode('utf-8') + "\n")
-
-        self.pratyayas = {}
-
-        pratyaya = "प्रत्ययः"
-        pratyaya = pratyaya.decode('utf-8')
-        subanta = "सुबन्त"
-        subanta = subanta.decode('utf-8')
-        for snum in self.sutras({ 'Sutra_type' : "विधिः"}):
-            s = self.sutra(snum)
-
-            if 'Anuvrtti' not in s:
-                continue
-
-            # The word 'pratyayaH' should be listed as an Anuvrtti pada
-            is_pratyaya = reduce(lambda x, y: x or y,
-                [(pratyaya in v['padas']) for v in s['Anuvrtti']])
-            if not is_pratyaya:
-                continue
-
-#            has_vibhakti5 = reduce(lambda x, y: x or y,
-#                [(p['type'] == subanta and p['vibhakti'] == 5) for p in s['PadacCheda']])
-
-            # Pick words in prathama-vibhakti as candidates
-            for p in s['PadacCheda']:
-                if p['type'] == subanta and p['vibhakti'] == 1:
-                    pada = p['pada']
-                    #print snum, pada.encode('utf-8')
-                    #if pada.endswith(u"\u200C"):
-                    #    continue
-                    if pada not in self.pratyayas:
-                        self.pratyayas[pada] = []
-                    self.pratyayas[pada].append(snum)
-
-        with open(outpath("pratyayas.json"), "w") as f:
-            stext = json.dumps(self.pratyayas, indent=4, ensure_ascii=False, separators=(',', ': '))
-            f.write(stext.encode('utf-8') + "\n")
 
 _ashtadhyayi = None
 def ashtadhyayi():
@@ -608,37 +480,6 @@ class Paribhasha:
 
     def action(self, sutra):
         return sutra
-
-class Rule:
-    def __init__(self, plist):
-        self.plist = plist
-        self.rule = []
-        self.compile()
-
-    def compile(self):
-        padas = []
-        for i in range(8):
-            padas.append([p for p in self.plist if 'vibhakti' in p and p['vibhakti'] == i])
-        
-
-        func_descs = []
-        if padas[7]:
-            func_descs.append(["PIPE", [["IF", p] for p in padas[7]]])
-        if padas[6]:
-            func_descs.append(["PIPE", [["IF", p] for p in padas[6]]])
-        if padas[5]:
-            func_descs.append(["PIPE", [["PARAM", p] for p in padas[5]]])
-        if padas[1]:
-            func_descs.append(["PIPE", [["INTERPRET", p] for p in padas[1]]])
-
-        self.rule = ["PIPE", func_descs]
-        #print_dict(self.rule)
-
-    def __repr__(self):
-        return self.rule
-
-    def apply(self, pada_desc):
-        return APPLY(pada_desc, self.rule)
 
 if __name__ == "__main__":
     if (len(sys.argv) < 2):
