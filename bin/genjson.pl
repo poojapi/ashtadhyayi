@@ -176,6 +176,9 @@ sub print_json_anuvrttis
 	foreach my $sec (split(/\s*\|\s*/, $anu_str))
 	{
 		my @anufields = split(/\s*:\s*/, $sec);
+        if (@anufields <= 1) {
+            print STDERR join(', ', @anufields);
+        }
         $anufields[1] =~ s/\s+$//;
         my @padas = map { "\"$_\"" } split(/\s+/, $anufields[1]);
         #print $anufields[0] . "-> {" . join(', ', @padas) . "}\n";

@@ -344,9 +344,10 @@ class Ashtadhyayi:
         for snum in self.sutras({ 'Sutra_type' : "संज्ञा" }):
             s = self.sutra(snum)
             for t in s['Term'].split():
+                # Search for samjna in sutra's padacCheda
                 pdesc = Subanta.analyze({'pada' : t,
                     'vibhakti' : 1, 'vachana' : 1})
-                #print_dict(pdesc)
+                print_dict(pdesc)
                 if pdesc:
                     praatipadikam = pdesc[0]['praatipadikam']
                 if not praatipadikam:
