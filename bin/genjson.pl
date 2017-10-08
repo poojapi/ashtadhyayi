@@ -175,14 +175,13 @@ sub print_json_anuvrttis
     my @anu_jsons = ();
 	foreach my $sec (split(/\s*\|\s*/, $anu_str))
 	{
-		my @anufields = split(/\s*:\s*/, $sec);
-        if (@anufields <= 1) {
-            print STDERR join(', ', @anufields);
-        }
-        $anufields[1] =~ s/\s+$//;
-        my @padas = map { "\"$_\"" } split(/\s+/, $anufields[1]);
+		my ($sutra_id, $padastr) = split(/\s*:\s*/, $sec);
+        $padastr =~ s/\s+$//;
+        my @padas = get_padas($padastr);
+        @padas = map { defined($_->{'vibhakti'}) 
+                            ? attrs2json($_) : $_->{'pada'} } @padas;
         #print $anufields[0] . "-> {" . join(', ', @padas) . "}\n";
-		push @anu_jsons, $indent . "    { \"sutra\": " . $anufields[0] . 
+		push @anu_jsons, $indent . "    { \"sutra\": " . $sutra_id .
 			", \"padas\": [" . join(', ', @padas) . "] }";
 	}
     $json .= join(",\n", @anu_jsons);
@@ -191,28 +190,6 @@ sub print_json_anuvrttis
     return $json;
 }
 
-sub print_pada_attrs
-{
-    my $indent = shift;
-    my $attrs = shift;
-    my @padas = @_;
-
-    return () unless @padas;
-    $attrs->{'type'} = 'तिङन्तम्' unless defined($attrs->{'type'});
-    my @pada_jsons = ();
-    foreach my $p (@padas) {
-        $attrs->{'pada'} = $p->[0];
-        $attrs->{'pada_split'} = $p->[1] if $p->[0] ne $p->[1];
-        my $attr_json = $indent . "{ " .  
-            join(', ', map { my $s = $_; "\"$s\" : " . 
-                        (($attrs->{$s} =~ /^\d+$/) ? $attrs->{$s} 
-                                                : "\"" . $attrs->{$s} . "\"")}
-                            sort(keys(%$attrs))) . " }";
-            push @pada_jsons, $attr_json;
-    }
-    return @pada_jsons;
-    #map { $indent . "{ \"$_\" : $attr_json }" } @padas;
-}
 
 sub utf8_to_int
 {
@@ -234,23 +211,18 @@ sub utf8_to_int
     return $val;
 }
 
-sub print_json_padaccheda
+sub get_padas
 {
-	my ($pada_str, $indent) = @_;
-    my $json = "";
+    my $pada_str = shift;
+    my $samasa_str = $pada_str;
+    $samasa_str = shift @_ if @_;
 
-    my ($pada_val, $samasa_val) = split(/\s*\|\|\s*/, $pada_str);
-    #print "padaccheda = " . $pada_str . "\n";
-	$json .= $indent . "[\n";
-    my $indent2 = "$indent    ";
-
-    #print "$pada_str\n";
-    my @components = extract_multiple($pada_val,
+    my @components = extract_multiple($pada_str,
         [
             sub { extract_bracketed($_[0],'()') },
             qr/\s*([^\s]+)\s*/,
         ]);
-    my @samasa_components = extract_multiple($samasa_val,
+    my @samasa_components = extract_multiple($samasa_str,
         [
             sub { extract_bracketed($_[0],'()') },
             qr/\s*([^\s]+)\s*/,
@@ -258,44 +230,79 @@ sub print_json_padaccheda
 
     #print join("\n", @components) . "\n";
 
-    my %pada_attrs = ();
+    my $attrs = undef;
     my @padas = ();
     my $emit = 0;
-    my @pada_jsons = ();
     for (my $i = 0; $i < @components; ++ $i) {
         $c = $components[$i];
         $samasa_c = $samasa_components[$i];
+        unless (defined $attrs) {
+            $attrs = {};
+            push @padas, $attrs;
+        }
         if ($c =~ /^\(/) {
             $c =~ s/^\(//; $c =~ s/\)$//;
-            $pada_attrs{'comment'} = $c;
+            $attrs->{'comment'} = $c;
             $emit = 1;
         }
         elsif ($c =~ m|(.*?)/(.*)|) {
             my ($vibhakti, $vachana) = ($1, $2);
             $vibhakti = utf8_to_int($vibhakti);
             $vachana = utf8_to_int($vachana);
-            $pada_attrs{'vibhakti'} = $vibhakti;
-            $pada_attrs{'vachana'} = $vachana;
+            $attrs->{'vibhakti'} = $vibhakti;
+            $attrs->{'vachana'} = $vachana;
             if ($vibhakti == 0 && $vachana == 0) {
-                $pada_attrs{'type'} = 'अव्यय';
+                $attrs->{'type'} = 'अव्यय';
             }
             else {
-                $pada_attrs{'type'} = 'सुबन्त';
+                $attrs->{'type'} = 'सुबन्त';
             }
             $emit = 1;
         }
         else {
             if ($emit) {
-                push @pada_jsons, print_pada_attrs($indent2, \%pada_attrs, @padas);
-                %pada_attrs = ();
-                @padas = ();
+                $attrs->{'type'} = 'तिङन्तम्' 
+                    unless defined  $attrs->{'type'};
+                $attrs = {};
+                push @padas, $attrs;
                 $emit = 0;
             }
-            push @padas, [$c, $samasa_c];
+            $attrs->{'pada'} = $c;
+            $attrs->{'pada_split'} = $samasa_c if $c ne $samasa_c;
         }
     }
-    push @pada_jsons, print_pada_attrs($indent2, \%pada_attrs, @padas) 
-        if @padas;
+
+    return @padas;
+}
+
+sub attrs2json
+{
+    my $attrs = shift;
+
+    my $str = "{ " .  
+        join(', ', map { my $s = $_; "\"$s\" : " . 
+                    (($attrs->{$s} =~ /^\d+$/) ? $attrs->{$s} 
+                                            : "\"" . $attrs->{$s} . "\"")}
+                        sort(keys(%$attrs))) . " }";
+    return $str;
+}
+
+sub print_json_padaccheda
+{
+	my ($pada_str, $indent) = @_;
+    my $json = "";
+
+    my ($pada_val, $samasa_val) = split(/\s*\|\|\s*/, $pada_str);
+	$json .= $indent . "[\n";
+    my $indent2 = "$indent    ";
+
+    my @padas = get_padas($pada_val, $samasa_val);
+
+    my @pada_jsons = ();
+    foreach my $p (@padas) {
+        my $attr_json = $indent2 . attrs2json($p);
+        push @pada_jsons, $attr_json;
+    }
     $json .= join(",\n", @pada_jsons);
     $json .= "\n$indent]\n";
 
