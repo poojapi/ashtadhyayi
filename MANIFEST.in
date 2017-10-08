@@ -1,3 +1,2 @@
 include README.rst
-include ashtadhyayi/ashtadhyayi-sutras.json
-include ashtadhyayi/*.csv
+include ashtadhyayi/data/*
