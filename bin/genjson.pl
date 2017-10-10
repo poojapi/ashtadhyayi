@@ -179,8 +179,8 @@ sub print_json_anuvrttis
         $padastr =~ s/\s+$//;
         my @padas = get_padas($padastr);
         @padas = map { defined($_->{'vibhakti'}) 
-                            ? attrs2json($_) : $_->{'pada'} } @padas;
-        #print $anufields[0] . "-> {" . join(', ', @padas) . "}\n";
+                            ? attrs2json($_) : "\"" . $_->{'pada'} . "\"" } @padas;
+        #print $sutra_id . "-> {" . join(', ', @padas) . "}\n";
 		push @anu_jsons, $indent . "    { \"sutra\": " . $sutra_id .
 			", \"padas\": [" . join(', ', @padas) . "] }";
 	}
@@ -232,7 +232,6 @@ sub get_padas
 
     my $attrs = undef;
     my @padas = ();
-    my $emit = 0;
     for (my $i = 0; $i < @components; ++ $i) {
         $c = $components[$i];
         $samasa_c = $samasa_components[$i];
@@ -243,7 +242,6 @@ sub get_padas
         if ($c =~ /^\(/) {
             $c =~ s/^\(//; $c =~ s/\)$//;
             $attrs->{'comment'} = $c;
-            $emit = 1;
         }
         elsif ($c =~ m|(.*?)/(.*)|) {
             my ($vibhakti, $vachana) = ($1, $2);
@@ -257,20 +255,19 @@ sub get_padas
             else {
                 $attrs->{'type'} = 'सुबन्त';
             }
-            $emit = 1;
         }
         else {
-            if ($emit) {
+            if (defined($attrs->{'pada'})) {
                 $attrs->{'type'} = 'तिङन्तम्' 
                     unless defined  $attrs->{'type'};
                 $attrs = {};
                 push @padas, $attrs;
-                $emit = 0;
             }
             $attrs->{'pada'} = $c;
             $attrs->{'pada_split'} = $samasa_c if $c ne $samasa_c;
         }
     }
+    $attrs->{'type'} = 'तिङन्तम्' unless defined  $attrs->{'type'};
 
     return @padas;
 }
@@ -301,6 +298,8 @@ sub print_json_padaccheda
     my @pada_jsons = ();
     foreach my $p (@padas) {
         my $attr_json = $indent2 . attrs2json($p);
+        #print $attr_json . "\n";
+
         push @pada_jsons, $attr_json;
     }
     $json .= join(",\n", @pada_jsons);

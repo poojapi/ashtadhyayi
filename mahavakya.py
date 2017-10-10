@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from ashtadhyayi.utils import *
 from ashtadhyayi.cmdline import *
 
 if (len(sys.argv) < 2):

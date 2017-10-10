@@ -36,3 +36,7 @@ def xliterate(mystr, from_script = "DEVANAGARI", to_script = "SLP1"):
             l = l.replace(c, '')
         l = sanscript.transliterate(l, from_script, to_script)
     return l
+
+def xliterate_obj(myobj, from_script = "DEVANAGARI", to_script = "SLP1"):
+    mystr = json.dumps(myobj, indent=4, ensure_ascii=False, separators=(',', ': '))
+    return json.loads(xliterate(mystr.encode('utf-8')))

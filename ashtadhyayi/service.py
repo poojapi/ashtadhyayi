@@ -42,14 +42,6 @@ class Ashtadhyayi:
         global UPADESHA
         UPADESHA = self.is_upadesha
 
-        # Key should be in SLP1 format
-        self.predefined_funcs = {
-            'antya' : lambda x: Subanta.praatipadikam(x)[-1],
-            'Adi' : lambda x: Subanta.praatipadikam(x)[0],
-            'upadeSa' : UPADESHA,
-            'hal' : lambda x: x if x['pada'] == 'hal' else None
-        }
-
         print "Loading Ashtadhyayi sutras .."
         with open(sutras_json_file) as data_file:
             try:
@@ -267,8 +259,8 @@ class Ashtadhyayi:
                         a_s = self.sutra(str(as_id))
                         if 'Anuvrtti' not in a_s:
                             continue
-                        if t == 'tadDita':
-                            print_dict(a_s['Anuvrtti'])
+                        #if t == 'tadDita':
+                            #print_dict(a_s['Anuvrtti'])
                         t_exists = reduce(lambda x, y: x or y,
                                         [(t in a['praatipadikas']) for a in a_s['Anuvrtti']])
                         if not t_exists:
@@ -283,6 +275,9 @@ class Ashtadhyayi:
 
                         # Pick words in prathama-vibhakti as candidates
                         for p in a_s['PadacCheda']:
+                            if 'type' not in p:
+                                print_dict(p)
+                                exit(0)
                             if p['type'] == utf8_decode("सुबन्त") and p['vibhakti'] == 1:
                                 pada = p['pada']
                                 if pada in not_terms:
@@ -304,9 +299,7 @@ class Ashtadhyayi:
                 s = self.sutra(defn['sutra_id'])
                 if utf8_decode("संज्ञा") not in s['Sutra_type']:
                     continue
-                vibhakti_ordered = sorted(defn['defn'], key=lambda k: k['vibhakti'] if ('vibhakti' in k) else 0, reverse=True)
-                #print_dict(vibhakti_ordered)
-                defn['rule'] = Rule(self, t).compile(vibhakti_ordered)
+                defn['rule'] = Rule(self, t).compile(defn['defn'])
                 #print(defn['rule'])
 
     def check_samjna(self, term_slp1, pada_desc):
@@ -347,7 +340,7 @@ class Ashtadhyayi:
                 # Search for samjna in sutra's padacCheda
                 pdesc = Subanta.analyze({'pada' : t,
                     'vibhakti' : 1, 'vachana' : 1})
-                print_dict(pdesc)
+                #print_dict(pdesc)
                 if pdesc:
                     praatipadikam = pdesc[0]['praatipadikam']
                 if not praatipadikam:
@@ -400,6 +393,7 @@ class Ashtadhyayi:
                     v_desc = p['vibhakti'] if 'vibhakti' in p else -1
                     def_padas.append("{}({})".format(p['pada'].encode('utf-8'), v_desc))
                     defn.append(p)
+                defn = xliterate_obj(defn)
                 self.terms_db[praatipadikam]['defns'].append({'sutra_id' : snum, 'defn' : defn})
                 term_defs_str += "{}: {} = {}\n".format(snum, praatipadikam, ' '.join(def_padas))
 
@@ -439,11 +433,16 @@ class Ashtadhyayi:
 
                 praatipadikas = []
                 for p in vrttam['padas']:
-                    for prevp in prev_padaccheda:
-                        if self.equal_dvng(p, prevp['pada']):
-                            new_vaakya.append(prevp)
-                            praatipadikas.append(Subanta.praatipadikam(prevp))
-                            break
+                    if isinstance(p, dict):
+                        p['analysis'] = Subanta.analyze(p)
+                        praatipadikas.append(Subanta.praatipadikam(p))
+                        new_vaakya.append(p)
+                    else:
+                        for prevp in prev_padaccheda:
+                            if self.equal_dvng(p, prevp['pada']):
+                                new_vaakya.append(prevp)
+                                praatipadikas.append(Subanta.praatipadikam(prevp))
+                                break
                 vrttam['praatipadikas'] = praatipadikas
                 #print "{}: {}".format(sutra_id, praatipadikas)
 
