@@ -182,6 +182,8 @@ class Ashtadhyayi:
             return cond(myobj)
         elif isinstance(cond, dict):
             if isinstance(myobj, list):
+                if not myobj:
+                    return False
                 # cond must match any list item
                 ismatch = reduce((lambda x, y: x or y), 
                     [self._propmatch(o, cond) for o in myobj])
