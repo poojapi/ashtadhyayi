@@ -1,2 +1,2 @@
 include README.rst
-include ashtadhyayi/data/*
+include vedavaapi/ashtadhyayi/data/*

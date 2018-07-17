@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from ashtadhyayi.cmdline import *
+from vedavaapi.ashtadhyayi.cmdline import *
 
 if (len(sys.argv) < 2):
     print("Usage: " + sys.argv[0] + " <sutranum>")

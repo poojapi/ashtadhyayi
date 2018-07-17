@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import locale
+import string
 import sys
 import json
 import re
@@ -80,33 +81,40 @@ class Ashtadhyayi:
         self.upadesha = { 'sutras' : [], 'dhaatu' : [], 
             'pratyaya' : [], 'nipAta' : [] }
         with open(datapath("maheshvara-sutras.txt")) as f:
-            self.upadesha['sutras'] = [l.strip() for l in f.readlines()]
-            pprint(self.upadesha['sutras'])
+            self.upadesha['sutras'] = [{'pada' : l.strip().split(), 'samjnas' : {}, 'upadesha' : True } for l in f.readlines()]
 
-        it = { 'l' : True }
+        hal_sutra = self.upadesha['sutras'][13]
+        hal_sutra['samjnas'] = { 'it' : [2] }
+        for p in self.upadesha['sutras']:
+            Ashtadhyayi.compute_pada(p)
+        pprint(self.upadesha['sutras'])
+
+    @staticmethod
+    def compute_pada(p):
+        p['computed_pada'] = p['pada']
+        if 'it' in p['samjnas']:
+            idx = [i for i in range(len(p['pada'])) if i not in p['samjnas']['it']]
+            p['computed_pada'] = [p['pada'][i] for i in idx]
+        return p['computed_pada']
+        
+    def expand_pratyahara(self, first, last):
         varnas = reduce(lambda x,y : x + y,
-            [s for s in self.upadesha['sutras']])
-            
-        def pratyahara(string):
-            if len(string) > 3:
-                return ""
-            if string[-1] not in it:
-                return ""
-            starti = -1
-            endi = 0
-            for i in range(len(varnas)):
-                if starti < 0 and varnas[i] == string[0]:
-                    starti = i
-                if endi < 0 and varnas[i] == string[1]:
-                    endi = i
-            if starti < 0 or endi < 0:
-                return ""
-            if starti >= endi:
-                return ""
-            return varnas[starti:endi]
-
-        for c in pratyahara("hl"):
-            it[c] = True
+            [s['computed_pada'] for s in self.upadesha['sutras']])
+        starti = -1
+        endi = -1
+        for i in range(len(varnas)):
+            if starti < 0 and varnas[i] == first:
+                starti = i
+            if endi < 0 and varnas[i] == last:
+                endi = i
+        if starti < 0 or endi < 0:
+            return ""
+        if starti >= endi:
+            return ""
+        res = {}
+        for c in varnas[starti:endi]:
+            res[c] = True
+        return res.keys()
 
     def is_samjna(self, pada_desc):
         praatipadikam = Subanta.praatipadikam(pada_desc)
@@ -293,7 +301,7 @@ class Ashtadhyayi:
                     term_desc['members'] = members
                     self.upadesha[t] = members.keys()
             
-    def compile_term_rules(self):
+    def compile_samjna_defs(self):
         for t,term_desc in self.terms_db.items():
             if 'members' in term_desc:
                 continue
@@ -312,16 +320,21 @@ class Ashtadhyayi:
             if Subanta.praatipadikam(pada_desc) in term_desc['members']:
                 return True
         for d in term_desc['defns']:
-            print "Checking rule .."
+            print "Checking {} against rule ..".format(pada_desc['pada'])
             print_dict(d['rule'])
             Rule(self, term_slp1, d['rule']).apply(pada_desc)
-        return pada_desc[term_slp1]
+        return pada_desc
 
     def compute_pratyaharas(self):
-        res = self.check_samjna('it', 
-            { 'pada' : 'hal', 'vibhakti' : 1, 'vachana' : 1 })
+        res = self.check_samjna('pratyAhAra', { 'pada' : 'hal', 'samjnas' : {'it' : [2]}, 'vibhakti' : 1, 'vachana' : 1 })
         print "Result: ", res
         
+    # Generate a sequence from Ashtadhyayi 
+    # represented by given start and end aksharas. For instance, 
+    #   aN means a i u
+    #   sup means "su au jas aM auT Shas .."
+    def gen_sequence(self, start, end):
+        return self.expand_pratyahara(start, end)
 
     def extract_termdefs(self):
         samjna_file = outpath("terms.json")
@@ -402,7 +415,7 @@ class Ashtadhyayi:
         print "Listing members of some samjnas .."
         self.find_listable_terms()
         print "Converting Samjna sutras into processing rules .."
-        self.compile_term_rules()
+        self.compile_samjna_defs()
 
         with open(outpath("terms.json"), "w") as f:
             stext = json.dumps(self.terms_db, indent=4, ensure_ascii=False, separators=(',', ': '))
@@ -413,7 +426,7 @@ class Ashtadhyayi:
             f.write(term_defs_slp1)
 
         print "Computing definitions of Pratyaharas .."
-        #self.compute_pratyaharas()
+        self.compute_pratyaharas()
 
     def build_mahavakyas(self):
         for snum in self.sutras():

@@ -4,6 +4,7 @@
 import sys
 import fileinput
 import locale
+from vedavaapi.utils import *
 from indic_transliteration import sanscript
 
 rmchars = [ u"\uFEFF", u"\u200c", u"\u200d", u"\u201c", u"\u201d" ]
@@ -17,15 +18,18 @@ word_dict = {}
 #from_script = sys.argv[1]
 #to_script = sys.argv[2]
 from_script = sanscript.DEVANAGARI
-to_script = sanscript.SLP1
+to_script = sanscript.ITRANS
 
 linenum = 0
 for line in fileinput.input():
     linenum = linenum + 1
     l = line.rstrip()
-    l = l.decode('utf-8')
-    if isinstance(l, unicode):
-        for c in rmchars:
-            l = l.replace(c, '')
-        l = sanscript.transliterate(l, from_script, to_script)
+    try:
+        l = l.encode('utf-8')
+    except Exception as e:
+        print "Skipping invalid line ", linenum
+        continue
+    for c in rmchars:
+        l = l.replace(c, '')
+    #l = sanscript.transliterate(l, from_script, to_script)
     print l

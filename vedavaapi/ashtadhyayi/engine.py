@@ -16,21 +16,21 @@ pada_spec = [
         'pada': 'At',
         'attrs': {
             'it' : [1],
-            'seq' : ['A']
-            'upadesa' : { 'source' : 'ashtadhyayi' }
-            'samjnas' : {'it' : [1], 'upaDA' : [0], 
-        }
+            'seq' : ['A'],
+            'upadesa' : { 'source' : 'ashtadhyayi' },
+            'samjnas' : {'it' : [1], 'upaDA' : [0] }
+        },
         'result' : ['A']
-    }
+    },
     {
         'pada': 'Ec',
         'attrs': {
             'it' : ['c'],
-            'upadesa' : True
-            'samjna' : True
-            'dhatu' : False
+            'upadesa' : True,
+            'samjna' : True,
+            'dhatu' : False,
             'pratyaya' : False
-        }
+        },
         'result' : ['E', 'O']
     }
 ]
@@ -51,7 +51,7 @@ def create_term_rules():
             members = {}
             for as_id in range(sstart, sstop):
                 a_s = a().sutra(str(as_id))
-                t_exists = reduce(lambda x, y, x or y,
+                t_exists = reduce(lambda x, y: x or y,
                                  [(t in a['padas']) for a in a_s['Anuvrtti']])
                 if not t_exists:
                     continue

@@ -4,23 +4,21 @@
 from .subanta import *
 
 class Rule:
+
     def __init__(self, ashtadhyayi, term_slp1, rule = None):
         self.a = ashtadhyayi
         self.samjna = term_slp1
         self.rule = rule
 
-        global IF
-        IF = self._if
-        global INTERPRET
-        INTERPRET = self._interpret
-        global UNION
-        UNION = self._union
-        global PIPE
-        PIPE = self._pipe
-        global GEN_SAMJNA
-        GEN_SAMJNA = self._gen_samjna
-        global GEN_SEQ
-        GEN_SEQ = self._gen_sequence
+        self.IF = self._if
+        self.IFNOT = self._ifnot
+        self.INTERPRET = self._interpret
+        self.UNION = self._union
+        self.PIPE = self._pipe
+        self.GEN_SAMJNA = self._gen_samjna
+        self.GEN_SEQ = self._gen_sequence
+
+        #global IF
 
         # Key should be in SLP1 format
         self.predefined_funcs = {
@@ -32,12 +30,17 @@ class Rule:
         }
 
     def _apply_func(self, pada_desc, func_desc):
-        if isinstance(func_desc[0], str):
-            f = eval(func_desc[0])
+        if isinstance(func_desc, list):
+            f = self._apply_func(pada_desc, func_desc[0])
+            return f(pada_desc, func_desc[1:]) if f else None
+        elif isinstance(func_desc, dict):
+            return self._interpret(pada_desc, func_desc)
+        elif isinstance(func_desc, str):
+            print func_desc
+            f = eval("self."+func_desc)
+            return f
         else:
-            f = INTERPRET
-        parms = func_desc[1:]
-        return f(pada_desc, parms)
+            return None
 
     # Return pada_desc if cond applies to it, None otherwise
     def _if(self, pada_desc, cond):
@@ -50,27 +53,52 @@ class Rule:
         return pada_desc if res else None
 
     def _ifnot(self, pada_desc, cond):
-        return None if self._if(pada_desc, cond) else pada_desc
+        if not self._if(pada_desc, cond):
+            return pada_desc
+        # Remove attribute from pada_desc named by the samjna
+        pada_desc[self.samjna].pop(self.samjna, None)
 
-    def _gen_samjna(self, pada_desc, defn):
-        res = self.apply(defn['samjna'])
 
-    def _gen_sequence(self, pada_desc, seq):
-        startc, endc = seq[0], seq[1]
-        print startc, endc
-        return startc
-        
+    def _gen_sequence(self, pada_desc, seq_desc):
+        first = self._apply_func(pada_desc, seq_desc[0])
+        if not first:
+            return None
+        elif isinstance(first, list):
+            first = first[0]
+        last = self._apply_func(pada_desc, seq_desc[1])
+        if not last:
+            return None
+        elif isinstance(last, list):
+            last = last[0]
+        seq = self.a.gen_sequence(first, last)
+        print "gen_sequence({}, {}) = {}".format(first, last, seq)
+        return seq
 
-    def _interpret(self, pada_desc, parms):
-        sutra_pada = parms[0]
-        praatipadikam = Subanta.praatipadikam(sutra_pada)
-        print "Sutra padam ", praatipadikam
+    def _gen_samjna(self, pada_desc, parms):
+        defn = parms[0]
+        res = self._apply_func(pada_desc, defn['samjna'])
+        if not res:
+            return None
+        self.samjna = Subanta.praatipadikam(pada_desc)
+        if defn['samjni']:
+            res = self._apply_func(pada_desc, defn['samjni'])
+        return res
+
+    def _interpret(self, pada_desc, func_desc):
+        sutra_pada = func_desc['pada']
+        print "Sutra padam ", sutra_pada
+        praatipadikam = Subanta.praatipadikam(func_desc)
+        print "Sutra praatipadikam ", praatipadikam
         res = None
         if praatipadikam is 'na':
+            # Remove attribute from pada_desc named by the samjna
             pada_desc[self.samjna].pop(self.samjna, None)
             return res
         elif praatipadikam in self.predefined_funcs:
             res = self.predefined_funcs[praatipadikam](pada_desc)
+        elif praatipadikam in pada_desc['samjnas']:
+            res = pada_desc['samjnas'][praatipadikam]
+            res = [pada_desc['pada'][i] for i in res]
         elif self.a.is_samjna(sutra_pada): 
             samjna_desc = self.a.terms_db[praatipadikam]
             if 'members' in samjna_desc:
@@ -99,14 +127,19 @@ class Rule:
             [self._apply_func(pada_desc, f) for f in func_descs])
 
     def _pipe(self, pada_desc, func_descs):
-        res = pada_desc
+        intersect = set()
         for f in func_descs:
-            res = self._apply_func(res, f)
+            res = self._apply_func(pada_desc, f)
+            print "pipe component result", res
             if not res:
-                break
-        print "Pipe result: ", res
+                return None
+            intersect = intersect & set(res) if intersect else set(res)
+            if not intersect:
+                return None
+        print "Pipe result: ", intersect
         return res
 
+    # Split given property list into those matching or not matching the cond. 
     def bifurcate(self, plist, cond):
         matches = []
         rest = []
@@ -124,17 +157,19 @@ class Rule:
             func_descs = ["PIPE", ["IF"] + p7]
 
         # Handle generated Samjna names
-        match, rest = self.bifurcate(rest, {'analysis' : {'praatipadika' : 'sva'} })
+        match, rest = self.bifurcate(rest, {'analysis' : {'praatipadikam' : 'sva'} })
         if match:
-            match, rest = self.bifurcate(rest, {'analysis' : {'praatipadika' : 'rUpa'} })
+            #print "Entered sva"
+            match, rest = self.bifurcate(rest, {'analysis' : {'praatipadikam' : 'rUpa'} })
             if match:
+                #print "Entered rUpa"
                 p6, rest = self.bifurcate(rest, {'vibhakti' : 6})
                 samjna = self._compile(rest) if rest else None
                 if p6:
-                    func_descs.append(["GEN_SAMJNA", 
+                    func_descs.extend(["GEN_SAMJNA", 
                         { 'samjni' : ["PIPE"] + p6, 'samjna' : samjna }])
                 else:
-                    func_descs.append(["GEN_SAMJNA", 
+                    func_descs.extend(["GEN_SAMJNA", 
                         { 'samjni' : None, 'samjna' : samjna }])
                     
                 return func_descs
@@ -142,6 +177,13 @@ class Rule:
         p6, rest = self.bifurcate(rest, {'vibhakti' : 6})
         if p6:
             func_descs.append(["PIPE"] + p6)
+
+        match, rest = self.bifurcate(rest, {'pada' : 'na', 'vibhakti' : 0})
+        if match:
+            if rest:
+                subrule = self._compile(rest)
+                func_descs.append(["IFNOT", subrule])
+                return func_descs
 
         p1, rest = self.bifurcate(rest, {'vibhakti' : 1})
         match, rest = self.bifurcate(rest, {'pada' : 'saha', 'vibhakti' : 0})

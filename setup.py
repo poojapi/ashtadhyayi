@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='vedavaapi_ashtadhyayi',
       version='0.1',
@@ -15,11 +15,12 @@ setup(name='vedavaapi_ashtadhyayi',
       author='Sai Susarla',
       author_email='sai.susarla@gmail.com',
       license='MIT',
-      packages=['ashtadhyayi'],
+      packages=find_packages(),
       scripts=['bin/genjson.pl'],
       entry_points = {
-        'console_scripts' : ['paribhasha=ashtadhyayi.cmdline:paribhasha',
-                             'mahavakya=ashtadhyayi.cmdline:mahavakya']
+        'console_scripts' :
+            ['paribhasha=vedavaapi.ashtadhyayi.cmdline:vedavaapi.paribhasha',
+                            'mahavakya=vedavaapi.ashtadhyayi.cmdline:mahavakya']
       },
 #      test_suite='nose.collector',
 #      tests_require=['nose'],

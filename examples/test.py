@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from ashtadhyayi.utils import *
-from ashtadhyayi.cmdline import *
+from vedavaapi.ashtadhyayi.utils import *
+from vedavaapi.ashtadhyayi.cmdline import *
 
 
-#print "Paribhasha of " + sys.argv[1]
-#x = paribhasha(sys.argv[1])
+print "Paribhasha of " + sys.argv[1]
+x = paribhasha(sys.argv[1])
 #print_dict(x)
 
 a_obj = a()
